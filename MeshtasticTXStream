@@ -1,0 +1,20 @@
+import subprocess
+import time
+
+# Configuration
+message_text = "Hello from Python!"
+interval_seconds = 3
+max_messages = 1000
+
+for i in range(max_messages):
+    try:
+        # Send message using Meshtastic CLI
+        message_text = f"Message {i+1}"
+        subprocess.run(["meshtastic", "--sendtext", message_text], check=True)
+        print(f"Sent message {i+1}/{max_messages}")
+        
+        # Wait for 5 seconds before next message
+        time.sleep(interval_seconds)
+    except subprocess.CalledProcessError as e:
+        print(f"Error sending message {i+1}: {e}")
+        break
