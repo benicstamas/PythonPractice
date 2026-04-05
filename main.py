@@ -94,11 +94,14 @@ counter = 0
 
 while True:
     # LED behavior: slow blink when advertising, solid on when connected
+    print("heartbeat", time.ticks_ms())
     if dev.is_connected():
         led.on()
+        print("heartbeatConnected", time.ticks_ms())
     else:
         led.on()
-        time.sleep(0.1)
+        print("heartbeatsearching", time.ticks_ms())
+        time.sleep(0.3)
         led.off()
 
     # Optional: send a notify once per second when connected
