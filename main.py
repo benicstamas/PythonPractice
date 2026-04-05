@@ -3,6 +3,11 @@ import time
 import struct
 import bluetooth
 from machine import Pin
+from micropython import const
+
+_IRQ_CENTRAL_CONNECT = const(1)
+_IRQ_CENTRAL_DISCONNECT = const(2)
+_IRQ_GATTS_WRITE = const(3)
 
 LED_PIN = 2
 led = Pin(LED_PIN, Pin.OUT)
@@ -60,22 +65,23 @@ class RideOnBLE:
     def is_connected(self):
         return len(self._connections) > 0
 
-    def _irq(self, event, data):
-        if event == bluetooth.IRQ_CENTRAL_CONNECT:
-            conn_handle, addr_type, addr = data
-            self._connections.add(conn_handle)
-            print("Connected:", addr_type, bytes(addr))
-        elif event == bluetooth.IRQ_CENTRAL_DISCONNECT:
-            conn_handle, addr_type, addr = data
-            if conn_handle in self._connections:
-                self._connections.remove(conn_handle)
-            print("Disconnected")
-            self._advertise()
-        elif event == bluetooth.IRQ_GATTS_WRITE:
-            conn_handle, value_handle = data
-            if value_handle == self._rx_handle:
-                rx = self._ble.gatts_read(self._rx_handle)
-                print("RX bytes:", rx)
+def _irq(self, event, data):
+    if event == _IRQ_CENTRAL_CONNECT:
+        conn_handle, addr_type, addr = data
+        self._connections.add(conn_handle)
+        print("Connected:", conn_handle)
+
+    elif event == _IRQ_CENTRAL_DISCONNECT:
+        conn_handle, addr_type, addr = data
+        self._connections.discard(conn_handle)
+        print("Disconnected:", conn_handle)
+        self._advertise()
+
+    elif event == _IRQ_GATTS_WRITE:
+        conn_handle, value_handle = data
+        if value_handle == self._rx_handle:
+            rx = self._ble.gatts_read(self._rx_handle)
+            print("RX bytes:", rx)
 
     def notify(self, data: bytes):
         # Send notify to all active connections
@@ -108,5 +114,3 @@ while True:
     if dev.is_connected():
         counter += 1
         dev.notify(("hello %d" % counter).encode())
-
-    time.sleep(1.0)
