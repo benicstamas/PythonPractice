@@ -43,7 +43,7 @@ I2C_PINS = [
 # =========================
 # SAFETY THRESHOLDS
 # =========================
-TEMP_LIMIT_C    = 70.0
+# TEMP_LIMIT_C    = 70.0
 CURRENT_LIMIT_A = 40.0
 UNDERVOLT_V     = 10.0
 OVERVOLT_V      = 20.0
@@ -115,14 +115,14 @@ adc_curr = ADC(Pin(CURR_ADC_PIN))
 adc_curr.atten(ADC.ATTN_11DB)
 
 # AHT10 sensors
-from aht10 import AHT10
+# from aht10 import AHT10
 
-i2c_list = []
-sensors = []
-for idx, (scl, sda) in enumerate(I2C_PINS):
-    i2c = I2C(idx, scl=Pin(scl), sda=Pin(sda))
-    i2c_list.append(i2c)
-    sensors.append(AHT10(i2c))
+# i2c_list = []
+# sensors = []
+# for idx, (scl, sda) in enumerate(I2C_PINS):
+#    i2c = I2C(idx, scl=Pin(scl), sda=Pin(sda))
+#   i2c_list.append(i2c)
+#   sensors.append(AHT10(i2c))
 
 # =========================
 # Global state
@@ -203,15 +203,15 @@ def read_current_A():
     return (v_sensor - ACS_ZERO_V) / ACS_GAIN_V_PER_A
 
 
-def read_max_temp_C():
-    temps = []
-    for s in sensors:
-        try:
-            temps.append(s.temperature)
-        except Exception:
-            # if a sensor read fails, treat as very hot -> immediate safe stop
-            temps.append(999.0)
-    return max(temps) if temps else 999.0
+#def read_max_temp_C():
+#    temps = []
+#    for s in sensors:
+#        try:
+#            temps.append(s.temperature)
+#        except Exception:
+#            # if a sensor read fails, treat as very hot -> immediate safe stop
+#            temps.append(999.0)
+#    return max(temps) if temps else 999.0
 
 
 # =========================
