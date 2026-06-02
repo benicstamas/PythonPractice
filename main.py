@@ -5,14 +5,13 @@
 # - PWM + direction bit for throttle and steering
 # - Boot-time current sensor calibration with sanity check
 # - Latched faults (reset only by power-cycle)
-# - Telemetry notifications (max temp, vbat, current, fault flags)
+# - Telemetry notifications (vbat, current, fault flags)
 #
 # IMPORTANT:
-# - Requires aht10.py present on the device (in the same directory as this file).
 # - You MUST adjust GPIO pin assignments to your wiring.
 
 import time
-from machine import Pin, PWM, ADC, I2C
+from machine import Pin, PWM, ADC
 import ubluetooth
 from struct import pack
 
@@ -30,20 +29,9 @@ STR_DIR_PIN = 33
 VBAT_ADC_PIN = 34
 CURR_ADC_PIN = 35
 
-# AHT10: 5 sensors, each on its own I2C bus (EDIT ME)
-# Use only safe ESP32 pins (avoid 0,2,4,5,12,15 where possible).
-I2C_PINS = [
-    (16, 17),  # (SCL, SDA)
-    (18, 19),
-    (21, 22),
-    (23, 27),
-    (14, 12),
-]
-
 # =========================
 # SAFETY THRESHOLDS
 # =========================
-# TEMP_LIMIT_C    = 70.0
 CURRENT_LIMIT_A = 40.0
 UNDERVOLT_V     = 10.0
 OVERVOLT_V      = 20.0
@@ -87,11 +75,11 @@ _FLAG_WRITE_NO_RESPONSE = 0x0004
 # =========================
 # FAULT FLAGS (latched until power-cycle)
 # =========================
-FAULT_OVERTEMP    = 1 << 0
-FAULT_OVERCURRENT = 1 << 1
-FAULT_UNDERVOLT   = 1 << 2
-FAULT_OVERVOLT    = 1 << 3
-FAULT_CAL_INVALID = 1 << 4
+FAULT_OVERTEMP    = 0
+FAULT_OVERCURRENT = 1 << 0
+FAULT_UNDERVOLT   = 1 << 1
+FAULT_OVERVOLT    = 1 << 2
+FAULT_CAL_INVALID = 1 << 3
 
 # =========================
 # TELEMETRY
@@ -113,16 +101,6 @@ adc_vbat.atten(ADC.ATTN_11DB)
 
 adc_curr = ADC(Pin(CURR_ADC_PIN))
 adc_curr.atten(ADC.ATTN_11DB)
-
-# AHT10 sensors
-# from aht10 import AHT10
-
-# i2c_list = []
-# sensors = []
-# for idx, (scl, sda) in enumerate(I2C_PINS):
-#    i2c = I2C(idx, scl=Pin(scl), sda=Pin(sda))
-#   i2c_list.append(i2c)
-#   sensors.append(AHT10(i2c))
 
 # =========================
 # Global state
@@ -203,17 +181,6 @@ def read_current_A():
     return (v_sensor - ACS_ZERO_V) / ACS_GAIN_V_PER_A
 
 
-#def read_max_temp_C():
-#    temps = []
-#    for s in sensors:
-#        try:
-#            temps.append(s.temperature)
-#        except Exception:
-#            # if a sensor read fails, treat as very hot -> immediate safe stop
-#            temps.append(999.0)
-#    return max(temps) if temps else 999.0
-
-
 # =========================
 # Boot-time calibration
 # =========================
@@ -260,13 +227,10 @@ def safety_check():
     if fault_latched:
         return
 
-    tmax = read_max_temp_C()
     iabs = abs(read_current_A())
     vbat = read_vbat()
 
-    if tmax >= TEMP_LIMIT_C:
-        emergency_stop(FAULT_OVERTEMP)
-    elif iabs >= CURRENT_LIMIT_A:
+    if iabs >= CURRENT_LIMIT_A:
         emergency_stop(FAULT_OVERCURRENT)
     elif vbat <= UNDERVOLT_V:
         emergency_stop(FAULT_UNDERVOLT)
@@ -337,13 +301,12 @@ def ble_init():
 # =========================
 
 def build_telemetry():
-    tmax = read_max_temp_C()
     vbat = read_vbat()
     iabs = abs(read_current_A())
 
     # Packet:
     # int16 temp_cC, uint16 vbat_cV, uint16 curr_cA, uint8 flags
-    temp_cC = int(tmax * 100)
+    temp_cC = 0
     vbat_cV = int(vbat * 100)
     curr_cA = int(iabs * 100)
 
